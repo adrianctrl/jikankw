@@ -12,6 +12,13 @@ async function ambilDataAnimeGodVersionV3(id) {
         });
         const $ = cheerio.load(respon.data);
 
+        // Helper: balik "Lastname, Firstname" jadi "Firstname Lastname"
+        const balikNama = (nama) => {
+            if (!nama || nama === 'Unknown') return nama;
+            const parts = nama.split(',').map(s => s.trim());
+            return parts.length === 2 ? `${parts[1]} ${parts[0]}` : nama;
+        };
+
         const judul = $('h1.title-name').text().trim();
         const sinopsis = $('p[itemprop="description"]').text().trim();
 
@@ -66,11 +73,11 @@ async function ambilDataAnimeGodVersionV3(id) {
                 const matchRank = rawRanking.match(/#?\d+/);
                 ranking = matchRank ? matchRank[0] : rawRanking.split('\n')[0].trim();
             }
-            else if (teksElemen.startsWith('Studios:')) studio = $(elemen).find('a').map((j, a) => $(a).text().trim()).get().join(', ') || 'None';
-            else if (teksElemen.startsWith('Licensors:')) lisensor = $(elemen).find('a').map((j, a) => $(a).text().trim()).get().join(', ') || 'None';
+            else if (teksElemen.startsWith('Studios:')) studio = $(elemen).find('a').map((j, a) => $(a).text().trim()).get().join(' | ') || 'None';
+            else if (teksElemen.startsWith('Licensors:')) lisensor = $(elemen).find('a').map((j, a) => $(a).text().trim()).get().join(' | ') || 'None';
             else if (teksElemen.startsWith('Producers:')) {
                 const listProd = $(elemen).find('a').map((j, a) => $(a).text().trim()).get();
-                produser = listProd.length > 0 ? listProd.join(', ') : 'None';
+                produser = listProd.length > 0 ? listProd.join(' | ') : 'None';
             }
             else if (teksElemen.startsWith('Genres:') || teksElemen.startsWith('Genre:')) {
                 $(elemen).find('a').each((j, a) => { daftarGenre.push($(a).text().trim()); });
@@ -116,14 +123,14 @@ async function ambilDataAnimeGodVersionV3(id) {
                                    tdVaInfo.find('small').text().trim();
 
                 if (bahasaText.toLowerCase().includes('japanese')) {
-                    namaSeiyuu = tdVaInfo.find('a').first().text().trim() || 'Unknown';
+                    namaSeiyuu = balikNama(tdVaInfo.find('a').first().text().trim()) || 'Unknown';
                     return false; // break
                 }
             });
 
             // Fallback: kalau ga ada Japanese, ambil VA pertama yang ada
             if (namaSeiyuu === 'Unknown') {
-                namaSeiyuu = tdVA.find('a').first().text().trim() || 'Unknown';
+                namaSeiyuu = balikNama(tdVA.find('a').first().text().trim()) || 'Unknown';
             }
 
             listKarakterLengkap.push({
