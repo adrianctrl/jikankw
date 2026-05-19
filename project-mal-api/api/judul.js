@@ -1,7 +1,7 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 
-async function cariAnimeGodVersion(judul) {
+async function cariAnimeGodVersionV3(judul) {
     try {
         const konfigurasiReq = {
             headers: {
@@ -27,6 +27,15 @@ async function cariAnimeGodVersion(judul) {
         const sinopsis = $('p[itemprop="description"]').text().trim();
         const skor = $('div.score-label').first().text().trim();
         const coverUrl = $('meta[property="og:image"]').attr('content') || $('img[itemprop="image"]').attr('data-src') || $('img[itemprop="image"]').attr('src');
+
+        let trailerYoutubeUrl = 'N/A';
+        const linkEmbedYoutube = $('a.iframe.js-fancybox-video').attr('href') || $('iframe.youtube-preview').attr('src');
+        if (linkEmbedYoutube) {
+            const cocokId = linkEmbedYoutube.match(/(?:embed\/|v=)([^?&]+)/);
+            if (cocokId && cocokId[1]) {
+                trailerYoutubeUrl = `https://www.youtube.com/watch?v=${cocokId[1]}`;
+            }
+        }
 
         let judulInggris = 'N/A', judulJepang = 'N/A', judulSinonim = 'N/A';
         let tipe = 'Unknown', episode = 'Unknown', statusAsli = 'Unknown', tanggalRilis = 'Unknown';
@@ -107,6 +116,7 @@ async function cariAnimeGodVersion(judul) {
             total_voter: scoredBy,
             cover_hd: coverUrl,
             status_custom: statusCustom,
+            trailer_youtube: trailerYoutubeUrl,
             informasi_detail: { tipe, total_episode: episode, status_asli_mal: statusAsli.toUpperCase(), tanggal_rilis: tanggalRilis, musim_rilis: musimRilis, durasi_per_episode: durasi, sumber_adaptasi: sumberAdaptasi, rating_umur: ratingUmur, studio_animasi: studio, produser, lisensor_resmi: lisensor, genre: daftarGenre },
             statistik_komunitas: { ranking_global: ranking, popularitas, total_members: totalMembers },
             daftar_karakter_utama_dan_seiyuu: listKarakterLengkap,
@@ -116,7 +126,7 @@ async function cariAnimeGodVersion(judul) {
             }
         };
     } catch (kesalahan) {
-        throw new Error('Gagal melacak detail super dewa versi 2 anime lewat judul.');
+        throw new Error('Gagal melacak trailer anime lewat judul.');
     }
 }
 
@@ -125,7 +135,7 @@ module.exports = async (permintaan, tanggapan) => {
     if (!q) return tanggapan.status(400).json({ pesanKesalahan: 'Masukan judul anime yang mau dicari!' });
 
     try {
-        const data = await cariAnimeGodVersion(q);
+        const data = await cariAnimeGodVersionV3(q);
         tanggapan.setHeader('Access-Control-Allow-Origin', '*');
         tanggapan.status(200).json(data);
     } catch (kesalahan) {
