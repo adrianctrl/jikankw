@@ -1,7 +1,7 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 
-async function ambilDataAnimeGodVersion(id) {
+async function ambilDataAnimeGodVersionV3(id) {
     try {
         const respon = await axios.get(`https://myanimelist.net/anime/${id}`, {
             headers: {
@@ -15,9 +15,19 @@ async function ambilDataAnimeGodVersion(id) {
         const judul = $('h1.title-name').text().trim();
         const sinopsis = $('p[itemprop="description"]').text().trim();
         const skor = $('div.score-label').first().text().trim();
-        
-        // Mengambil URL Cover HD / Ukuran Besar dari meta tag atau gambar utama
         const coverUrl = $('meta[property="og:image"]').attr('content') || $('img[itemprop="image"]').attr('data-src') || $('img[itemprop="image"]').attr('src');
+
+        // FITUR BARU: Mengambil Link Video Trailer YouTube dari MAL
+        let trailerYoutubeUrl = 'N/A';
+        const linkEmbedYoutube = $('a.iframe.js-fancybox-video').attr('href') || $('iframe.youtube-preview').attr('src');
+        
+        if (linkEmbedYoutube) {
+            // Logika cerdas buat ekstrak ID video YouTube dari link embed MAL
+            const cocokId = linkEmbedYoutube.match(/(?:embed\/|v=)([^?&]+)/);
+            if (cocokId && cocokId[1]) {
+                trailerYoutubeUrl = `https://www.youtube.com/watch?v=${cocokId[1]}`;
+            }
+        }
 
         let judulInggris = 'N/A';
         let judulJepang = 'N/A';
@@ -59,7 +69,6 @@ async function ambilDataAnimeGodVersion(id) {
             }
         });
 
-        // Logika konversi status biar sesuai request lo (Complete, Ongoing, dll)
         let statusCustom = 'Unknown';
         if (statusAsli.includes('finished airing')) {
             statusCustom = 'Complete';
@@ -86,11 +95,7 @@ async function ambilDataAnimeGodVersion(id) {
             });
 
             if (namaKarakter) {
-                listKarakterLengkap.push({
-                    nama: namaKarakter,
-                    peran: peran,
-                    seiyuu_jepang: namaSeiyuu
-                });
+                listKarakterLengkap.push({ nama: namaKarakter, peran, seiyuu_jepang: namaSeiyuu });
             }
         });
 
@@ -108,6 +113,7 @@ async function ambilDataAnimeGodVersion(id) {
             total_voter: scoredBy,
             cover_hd: coverUrl,
             status_custom: statusCustom,
+            trailer_youtube: trailerYoutubeUrl, // Hasil link YouTube asli ditaruh disini bro
             informasi_detail: {
                 tipe,
                 total_episode: episode,
@@ -130,7 +136,7 @@ async function ambilDataAnimeGodVersion(id) {
             }
         };
     } catch (kesalahan) {
-        throw new Error('Gagal mengorek data super dewa versi 2 dari MAL.');
+        throw new Error('Gagal mengorek data trailer dari MAL.');
     }
 }
 
@@ -139,7 +145,7 @@ module.exports = async (permintaan, tanggapan) => {
     if (!id) return tanggapan.status(400).json({ pesanKesalahan: 'Parameter ID nya mana bro?' });
 
     try {
-        const data = await ambilDataAnimeGodVersion(id);
+        const data = await ambilDataAnimeGodVersionV3(id);
         tanggapan.setHeader('Access-Control-Allow-Origin', '*');
         tanggapan.status(200).json(data);
     } catch (kesalahan) {
