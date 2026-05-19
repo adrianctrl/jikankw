@@ -27,9 +27,15 @@ async function ambilDataAnimeGodVersionV3(id) {
                      $('span[itemprop="ratingValue"]').first().text().trim() ||
                      'N/A';
 
-        const coverUrl = $('meta[property="og:image"]').attr('content') ||
-                         $('img[itemprop="image"]').attr('data-src') ||
-                         $('img[itemprop="image"]').attr('src');
+        const rawCoverUrl = $('meta[property="og:image"]').attr('content') ||
+                            $('img[itemprop="image"]').attr('data-src') ||
+                            $('img[itemprop="image"]').attr('src') || '';
+
+        // Paksa versi HD: MAL suffix 'l' sebelum ekstensi = full size
+        // "234567.jpg" -> "234567l.jpg" | "234567t.jpg" -> "234567l.jpg"
+        const coverUrl = rawCoverUrl
+            ? rawCoverUrl.replace(/(\w)(t|s)?(\.\w+)(\?.*)?$/, '$1l$3')
+            : null;
 
         // Trailer YouTube
         let trailerYoutubeUrl = 'N/A';
